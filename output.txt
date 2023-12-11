@@ -1,0 +1,2 @@
+["target/debug/day01_part01"]
+Hello World
