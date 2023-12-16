@@ -12,12 +12,34 @@ enum Value {
     Number(u32),
     Empty,
 }
+#[derive(Debug, Hash, Eq, PartialEq)]
+struct Position(i32, i32);
 
 #[derive(Debug)]
 struct Point {
     x: i32,
     y: i32,
     value: Value,
+}
+
+impl Point {
+    fn new(x: i32, y: i32, value: Value) -> Self {
+        Self { x, y, value }
+    }
+    fn collect_number(vec_point: &Vec<&Point>) -> u32 {
+        let num = vec_point
+            .iter()
+            .filter_map(|point| match point.value {
+                Value::Number(n) => {
+                    return Some(n.to_string());
+                }
+                _ => return None,
+            })
+            .collect::<String>()
+            .parse::<u32>()
+            .unwrap();
+        return num;
+    }
 }
 
 fn process(contents: &str) -> Result<u32, ()> {
@@ -31,7 +53,7 @@ fn process(contents: &str) -> Result<u32, ()> {
         (-1, 0),
         (-1, 1),
     ];
-    let res: Vec<Vec<Point>> = contents
+    let engine_grid: Vec<Vec<Point>> = contents
         .lines()
         .enumerate()
         .map(|(y, line)| {
@@ -39,22 +61,13 @@ fn process(contents: &str) -> Result<u32, ()> {
                 .chars()
                 .enumerate()
                 .map(|(x, char)| match char {
-                    '.' => Point {
-                        x: x as i32,
-                        y: y as i32,
-                        value: Value::Empty,
-                    },
-
-                    c if char.is_digit(10) => Point {
-                        x: x as i32,
-                        y: y as i32,
-                        value: Value::Number(c.to_digit(10).unwrap().try_into().unwrap()),
-                    },
-                    c => Point {
-                        x: x as i32,
-                        y: y as i32,
-                        value: Value::Symbol(c),
-                    },
+                    '.' => Point::new(x as i32, y as i32, Value::Empty),
+                    c if char.is_digit(10) => Point::new(
+                        x as i32,
+                        y as i32,
+                        Value::Number(c.to_digit(10).unwrap().try_into().unwrap()),
+                    ),
+                    c => Point::new(x as i32, y as i32, Value::Symbol(c)),
                 })
                 .collect();
             return x_line;
@@ -64,7 +77,7 @@ fn process(contents: &str) -> Result<u32, ()> {
     let mut numbers: Vec<Vec<&Point>> = Vec::new();
     let mut symbols_map: HashMap<(i32, i32), &Point> = HashMap::new();
     // get all numbers
-    for x_line in res.iter() {
+    for x_line in engine_grid.iter() {
         for point in x_line.iter() {
             if let Value::Number(_) = point.value {
                 match numbers.iter().last() {
@@ -101,15 +114,8 @@ fn process(contents: &str) -> Result<u32, ()> {
                 })
             });
             if is_valid {
-                let mut sum = 0;
-                for (idx, point) in vec_point.iter().rev().enumerate() {
-                    if let Value::Number(n) = point.value {
-                        let i: u32 = 10;
-                        sum += n * i.pow(idx.try_into().unwrap());
-                    }
-                }
-                println!("{:?}", sum);
-                return Some(sum);
+                let number = Point::collect_number(vec_point);
+                return Some(number);
             }
             return None;
         })
