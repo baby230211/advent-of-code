@@ -9,6 +9,41 @@ fn main() {
 #[derive(Debug)]
 struct Seed {
     value: u64,
+    range: u64,
+}
+impl Seed {
+    fn is_include(&self, layer: &Layer) -> bool {
+        self.value >= layer.src && self.value < layer.src + layer.range
+    }
+    fn generate_from_outer(&mut self, layer: &Layer) -> Option<Seed> {
+        if self.is_include(layer) {
+            // intersection outer
+            if (self.value + self.range) > (layer.src + layer.range) {
+                let new_seed = Seed {
+                    value: layer.src + layer.range,
+                    range: self.value + self.range - layer.src - layer.range,
+                };
+
+                self.range = layer.src + layer.range - self.value;
+                self.value = self.value - layer.src + layer.dest;
+                return Some(new_seed);
+            }
+            return None;
+        }
+        // intersection lower
+        // src is lower than self.value
+        // self.value + range is higher than src
+        // split to two pieces and return the intersection one
+        if self.value < layer.src && self.value + self.range > layer.src {
+            let new_seed = Seed {
+                value: layer.src,
+                range: self.value + self.range - layer.src,
+            };
+            self.range = self.range - new_seed.range;
+            return Some(new_seed);
+        }
+        None
+    }
 }
 #[derive(Debug)]
 struct Layer {
@@ -25,14 +60,13 @@ fn process(contents: &str) -> Result<u64, ()> {
                 .split(" ")
                 .step_by(2)
                 .zip(seeds.split(" ").skip(1).step_by(2))
-                .flat_map(|(start_val, range)| {
+                .map(|(start_val, range)| {
                     let start_val = start_val.parse::<u64>().unwrap();
                     let range = range.parse::<u64>().unwrap();
-                    let mut res = vec![];
-                    for i in start_val..start_val + range {
-                        res.push(Seed { value: i });
+                    Seed {
+                        value: start_val,
+                        range,
                     }
-                    res
                 })
                 .collect::<Vec<_>>();
             let mut i = rest.split("\n");
@@ -66,19 +100,45 @@ fn process(contents: &str) -> Result<u64, ()> {
             let mut i = map.iter();
 
             while let Some(layers) = i.next() {
+                println!("------------");
                 println!("{:?}", layers);
+                let mut temp: Vec<Seed> = vec![];
                 seeds_num.iter_mut().for_each(|seed| {
                     let mut j = layers.iter();
                     while let Some(layer) = j.next() {
-                        if seed.value >= layer.src && seed.value < layer.src + layer.range {
-                            seed.value = layer.dest + seed.value - layer.src;
+                        if let Some(new_seed) = seed.generate_from_outer(layer) {
+                            temp.push(new_seed);
+                            break;
+                        } else if seed.is_include(layer) {
+                            // all includes
+                            seed.value = seed.value - layer.src + layer.dest;
                             break;
                         }
                     }
                 });
+                while temp.is_empty().not() {
+                    let mut temp2: Vec<Seed> = vec![];
+                    temp.iter_mut().for_each(|seed| {
+                        let mut j = layers.iter();
+                        while let Some(layer) = j.next() {
+                            if let Some(new_seed) = seed.generate_from_outer(layer) {
+                                temp2.push(new_seed);
+                                break;
+                            } else if seed.is_include(layer) {
+                                // all includes
+                                seed.value = seed.value - layer.src + layer.dest;
+                                break;
+                            }
+                        }
+                    });
+                    seeds_num.append(&mut temp);
+                    temp.clear();
+                    temp.append(&mut temp2);
+                }
+                println!("{:?}", seeds_num);
+                seeds_num.sort_by(|a, b| a.value.partial_cmp(&b.value).unwrap());
             }
 
-            seeds_num.sort_by(|a, b| a.value.partial_cmp(&b.value).unwrap());
             return Some(seeds_num);
         })
         .unwrap()
@@ -127,7 +187,11 @@ temperature-to-humidity map:
 
 humidity-to-location map:
 60 56 37
-56 93 4";
+56 93 4
+
+aaaa map:
+53 53 3
+44 56 27";
         assert_eq!(46, process(contents).unwrap());
     }
 }
