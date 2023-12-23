@@ -5,8 +5,8 @@ fn main() {
 }
 #[derive(Debug)]
 struct Race {
-    time: u32,
-    distance: u32,
+    time: u64,
+    distance: u64,
 }
 
 impl Race {
@@ -20,7 +20,7 @@ impl Race {
             })
             .collect::<Vec<_>>();
     }
-    fn get_pair(time_list: Vec<u32>, distance_list: Vec<u32>) -> Vec<Race> {
+    fn get_pair(time_list: Vec<u64>, distance_list: Vec<u64>) -> Vec<Race> {
         time_list
             .iter()
             .zip(distance_list.iter())
@@ -29,6 +29,17 @@ impl Race {
                 distance: *distance,
             })
             .collect::<Vec<_>>()
+    }
+    fn split_to_number(s: &str) -> u64 {
+        s.trim()
+            .split(" ")
+            .filter_map(|s| match s {
+                "" => None,
+                _ => Some(s.trim().to_string()),
+            })
+            .collect::<String>()
+            .parse::<u64>()
+            .unwrap()
     }
     fn get_number_of_ways(&self) -> u32 {
         let mut count = 0;
@@ -52,12 +63,16 @@ fn process(contents: &str) -> Result<u32, ()> {
         .flat_map(|(times, distance)| {
             let (_, times) = times.split_once(":").unwrap();
             let (_, distance) = distance.split_once(":").unwrap();
+            println!("{:?} {:?}", times, distance);
 
-            let time_list = Race::split_to_list(times);
-            let distance_list = Race::split_to_list(distance);
+            let time_list = vec![Race::split_to_number(times)];
+            println!("{:?}", time_list);
+            let distance_list = vec![Race::split_to_number(distance)];
+            println!("{:?}", distance_list);
             Race::get_pair(time_list, distance_list)
         })
         .collect::<Vec<_>>();
+    println!("{:?}", list);
     let mut sum = 1;
     for race in list {
         let ways = race.get_number_of_ways();
@@ -76,6 +91,6 @@ mod tests {
     fn test_process() {
         let contents = "Time:      7  15   30
 Distance:  9  40  200";
-        assert_eq!(288, process(contents).unwrap());
+        assert_eq!(71503, process(contents).unwrap());
     }
 }
