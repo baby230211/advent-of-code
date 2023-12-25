@@ -63,7 +63,7 @@ impl HandScore {
             _ => panic!("Invalid hand"),
         };
         println!("{:?}", hand_type);
-        let mut cards = hand
+        let cards = hand
             .chars()
             .map(|c| match c {
                 '2' => Card::Two,
